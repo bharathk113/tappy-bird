@@ -227,15 +227,17 @@
         const installBtn = document.getElementById('install-btn');
 
         installBtn.addEventListener('click', async () => {
-            if (!deferredPrompt) return;
-            // Show the install prompt
-            deferredPrompt.prompt();
-            // Wait for the user to respond to the prompt
-            const { outcome } = await deferredPrompt.userChoice;
-            console.log(`User response to install prompt: ${outcome}`);
-            // We've used the prompt, and can't use it again, discard it
-            deferredPrompt = null;
-            installBtn.classList.add('hidden');
+            if (deferredPrompt) {
+                // Show the native install prompt if captured
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                console.log(`User response to install prompt: ${outcome}`);
+                deferredPrompt = null;
+                // Don't hide button immediately, wait for app to restart in standalone
+            } else {
+                // Fallback for when browser hasn't fired event (or iOS)
+                alert("To install Tappy Bird:\n\n1. Tap your browser's Menu (⋮ or Share)\n2. Select 'Add to Home Screen' or 'Install App'");
+            }
         });
 
         // --- 2. AUTHENTICATION (Google) ---
@@ -740,8 +742,8 @@
                 bestScoreEl.innerText = Math.max(score, highScore);
                 dailyScoreEl.innerText = dailyScore;
 
-                // Nudge Install if available (AND NOT STANDALONE)
-                if (deferredPrompt && !isRunningStandalone()) {
+                // FORCE Show Install Button if not running in standalone mode (installed)
+                if (!isRunningStandalone()) {
                     installBtn.classList.remove('hidden');
                     installBtn.classList.add('flex');
                 }

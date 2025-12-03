@@ -1,75 +1,78 @@
-Tappy Bird 🐦
+# Tappy Bird 🐦
 
 A modern, web-based clone of the classic Flappy Bird game, featuring global leaderboards, daily high scores, and Progressive Web App (PWA) capabilities. Built with vanilla JavaScript, HTML5 Canvas, and Firebase.
 
-🎮 Features
+## 📚 Table of Contents
+- [🎮 Features](#-features)
+- [🛠️ Technologies Used](#-technologies-used)
+- [🚀 Getting Started](#-getting-started)
+  - [Prerequisites](#prerequisites)
+  - [1. Clone the Repository](#1-clone-the-repository)
+  - [2. Configure Firebase](#2-configure-firebase)
+  - [3. Update the Code](#3-update-the-code)
+  - [4. Local Testing](#4-local-testing)
+- [🌍 Deployment (GitHub Pages)](#-deployment-github-pages)
+- [📱 How to Install (PWA)](#-how-to-install-pwa)
+- [📄 License](#-license)
 
-Global Leaderboards: compete with players worldwide using Firebase Firestore.
+## 🎮 Features
 
-Google Authentication: Secure sign-in to save and track your high scores.
+- **Global Leaderboards**: Compete with players worldwide using Firebase Firestore.
+- **Google Authentication**: Secure sign-in to save and track your high scores.
+- **Daily Best**: Tracks your best score for the current day locally.
+- **PWA Support**: Installable on mobile and desktop devices as a native-like app.
+- **Responsive Design**: Optimized for both desktop (keyboard/mouse) and mobile (touch) play.
+- **Browser Agnostic Speed**: Game loop uses delta-time to ensure consistent game speed across 60Hz and 120Hz+ displays.
+- **No Backend Server**: Serverless architecture using Firebase.
 
-Daily Best: Tracks your best score for the current day locally.
+## 🛠️ Technologies Used
 
-PWA Support: Installable on mobile and desktop devices as a native-like app.
+- **Frontend**: HTML5, CSS3 (Tailwind CSS via CDN), JavaScript (ES6+).
+- **Game Engine**: Custom HTML5 Canvas engine.
+- **Backend/Database**: Google Firebase (Authentication & Firestore).
+- **Hosting**: GitHub Pages (Recommended).
 
-Responsive Design: optimized for both desktop (keyboard/mouse) and mobile (touch) play.
+## 🚀 Getting Started
 
-Browser Agnostic Speed: Game loop uses delta-time to ensure consistent game speed across 60Hz and 120Hz+ displays.
+### Prerequisites
 
-No Backend Server: Serverless architecture using Firebase.
+To get started, you will need:
 
-🛠️ Technologies Used
+- A Google Account (for Firebase).
+- A GitHub Account (for hosting).
+- A code editor (VS Code recommended).
 
-Frontend: HTML5, CSS3 (Tailwind CSS via CDN), JavaScript (ES6+).
+### 1. Clone the Repository
 
-Game Engine: Custom HTML5 Canvas engine.
-
-Backend/Database: Google Firebase (Authentication & Firestore).
-
-Hosting: GitHub Pages (Recommended).
-
-🚀 Getting Started
-
-Prerequisites
-
-A Google Account (for Firebase).
-
-A GitHub Account (for hosting).
-
-A code editor (VS Code recommended).
-
-1. Clone the Repository
-
-git clone [https://github.com/yourusername/tappy-bird.git](https://github.com/yourusername/tappy-bird.git)
+```bash
+git clone https://github.com/yourusername/tappy-bird.git
 cd tappy-bird
+```
 
-
-2. Configure Firebase
+### 2. Configure Firebase
 
 This game relies on Firebase for the leaderboard and authentication. You need to create your own free project.
 
-Go to the Firebase Console.
+1. Go to the **Firebase Console**.
+2. Create a new project named **Tappy Bird**.
 
-Create a new project named Tappy Bird.
+#### Authentication:
 
-Authentication:
+1. Go to **Build > Authentication**.
+2. Click **Get Started**.
+3. Enable Google as a Sign-in method.
 
-Go to Build > Authentication.
+#### Firestore Database:
 
-Click Get Started.
+1. Go to **Build > Firestore Database**.
+2. Click **Create Database**.
+3. Start in Test Mode (or Production mode, but you will need to set rules).
 
-Enable Google as a Sign-in method.
+#### Set Security Rules:
 
-Firestore Database:
+Go to the "Rules" tab and paste this to allow logged-in users to play:
 
-Go to Build > Firestore Database.
-
-Click Create Database.
-
-Start in Test Mode (or Production mode, but you will need to set rules).
-
-Set Security Rules: Go to the "Rules" tab and paste this to allow logged-in users to play:
-
+```plaintext
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -78,22 +81,20 @@ service cloud.firestore {
     }
   }
 }
+```
 
+#### Get Configuration:
 
-Get Configuration:
+1. Go to **Project Settings (Gear icon) > General**.
+2. Scroll to "Your apps" > Click the Web icon (`</>`).
+3. Register app (e.g., "Tappy Bird Web").
+4. Copy the `firebaseConfig` object.
 
-Go to Project Settings (Gear icon) > General.
+### 3. Update the Code
 
-Scroll to "Your apps" > Click the Web icon (</>).
+Open `index.html` and find the `firebaseConfig` section (around line 180). Replace the placeholder values with your actual keys from Step 2.
 
-Register app (e.g., "Tappy Bird Web").
-
-Copy the firebaseConfig object.
-
-3. Update the Code
-
-Open index.html and find the firebaseConfig section (around line 180). Replace the placeholder values with your actual keys from Step 2.
-
+```javascript
 // --- 1. CONFIGURATION & SETUP ---
 const firebaseConfig = {
     apiKey: "YOUR_API_KEY",
@@ -104,44 +105,37 @@ const firebaseConfig = {
     appId: "YOUR_APP_ID",
     measurementId: "OPTIONAL"
 };
+```
 
+### 4. Local Testing
 
-4. Local Testing
+Since this is a simple HTML file, you can use an extension like **Live Server** in VS Code to run it locally.
 
-Since this is a simple HTML file, you can use an extension like Live Server in VS Code to run it locally.
+> **Note:** Google Sign-In might not work on `127.0.0.1` or `localhost` unless you add localhost to your Firebase "Authorized Domains" list (Authentication > Settings > Authorized Domains).
 
-Note: Google Sign-In might not work on 127.0.0.1 or localhost unless you add localhost to your Firebase "Authorized Domains" list (Authentication > Settings > Authorized Domains).
+## 🌍 Deployment (GitHub Pages)
 
-🌍 Deployment (GitHub Pages)
+1. Push your changes to your GitHub repository.
+2. Go to your repository **Settings**.
+3. Navigate to **Pages** (on the left sidebar).
+4. Under Build and deployment, select **Source** as Deploy from a branch.
+5. Select `main` (or `master`) branch and `/` (root) folder, then click **Save**.
+6. Wait a moment for the URL to generate (e.g., `https://yourusername.github.io/tappy-bird/`).
 
-Push your changes to your GitHub repository.
+### CRITICAL STEP:
 
-Go to your repository Settings.
-
-Navigate to Pages (on the left sidebar).
-
-Under Build and deployment, select Source as Deploy from a branch.
-
-Select main (or master) branch and / (root) folder. click Save.
-
-Wait a moment for the URL to generate (e.g., https://yourusername.github.io/tappy-bird/).
-
-CRITICAL STEP:
 For Google Login to work, you MUST add your new GitHub Pages domain to Firebase:
 
-Go to Firebase Console > Authentication > Settings > Authorized Domains.
+1. Go to **Firebase Console > Authentication > Settings > Authorized Domains**.
+2. Add your domain (e.g., `yourusername.github.io`).
 
-Add your domain (e.g., yourusername.github.io).
+## 📱 How to Install (PWA)
 
-📱 How to Install (PWA)
+1. Open the website on your mobile device (Chrome on Android or Safari on iOS).
+2. Play one game until you hit Game Over.
+3. Click the "📲 INSTALL APP" button if it appears, or use the browser menu ("Add to Home Screen").
 
-Open the website on your mobile device (Chrome on Android or Safari on iOS).
-
-Play one game until you hit Game Over.
-
-Click the "📲 INSTALL APP" button if it appears, or use the browser menu ("Add to Home Screen").
-
-📄 License
+## 📄 License
 
 This project is open source and available under the MIT License.
 
