@@ -6,8 +6,16 @@
     <title>Tappy Bird - Global Scores</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
-    <!-- PWA Manifest for "Install App" feature -->
-    <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIlRhcHB5IEJpcmQiLAogICJzaG9ydF9uYW1lIjogIlRhcHB5IiwKICAic3RhcnRfdXJsIjogIi4iLAogICJkaXNwbGF5IjogInN0YW5kYWxvbmUiLAogICJiYWNrZ3JvdW5kX2NvbG9yIjogIiM3MGM1Y2UiLAogICJ0aGVtZV9jb2xvciIjogIiM3MGM1Y2UiLAogICJpY29ucyI6IFt7CiAgICAic3JjIjogImh0dHBzOi8vdmlhLnBsYWNlaG9sZGVyLmNvbS8xOTIiLAogICAgInNpemVzIjogIjE5MngxOTIiLAogICAgInR5cGUiOiAiaW1hZ2UvcG5nIgogIH1dCn0=">
+    
+    <!-- --- NEW: FAVICONS & PWA ICONS --- -->
+    <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+    <link rel="shortcut icon" href="favicon.ico">
+    
+    <!-- Link to your actual manifest file -->
+    <link rel="manifest" href="site.webmanifest">
+    
     <style>
         body {
             margin: 0;
@@ -51,7 +59,10 @@
             
             <!-- Main Menu -->
             <div id="start-screen" class="text-center pointer-events-auto transition-opacity duration-300 flex flex-col items-center w-full max-w-md px-4">
-                <h1 class="text-4xl md:text-6xl text-white pixel-text mb-4 text-yellow-400">TAPPY<br>BIRD</h1>
+                
+                <!-- --- NEW: LOGO IMAGE --- -->
+                <!-- We display your logo image here. Adjust width (w-64) if needed. -->
+                <img src="tappy-bird-logo.png" alt="Tappy Bird Logo" class="w-64 md:w-80 mb-6 drop-shadow-lg animate-bounce-slow">
                 
                 <div id="auth-section" class="mb-6 w-full">
                     <div id="user-info" class="hidden mb-4 text-white text-xs md:text-sm bg-black/30 p-2 rounded backdrop-blur-sm">
