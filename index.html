@@ -79,10 +79,10 @@
             </div>
 
             <!-- Game Over Screen -->
-            <div id="game-over-screen" class="hidden text-center pointer-events-auto bg-black/60 p-6 rounded-xl backdrop-blur-md w-[90%] max-w-sm">
+            <div id="game-over-screen" class="hidden text-center pointer-events-auto bg-black/60 p-6 rounded-xl backdrop-blur-md w-[90%] max-w-md max-h-[90vh] overflow-y-auto">
                 <h2 class="text-4xl text-red-500 pixel-text mb-4">GAME OVER</h2>
                 
-                <div class="bg-[#ded895] border-4 border-[#543847] p-4 rounded mb-6 w-full relative shadow-xl">
+                <div class="bg-[#ded895] border-4 border-[#543847] p-4 rounded mb-4 w-full relative shadow-xl">
                     <div class="flex justify-between mb-2">
                         <span class="text-[#e86a17] text-xs">SCORE</span>
                         <span id="final-score" class="text-white text-shadow-sm font-bold text-xl">0</span>
@@ -97,6 +97,14 @@
                     </div>
                     <div id="new-highscore-badge" class="hidden absolute -top-3 -right-3 bg-red-500 text-white text-[10px] px-3 py-1 transform rotate-12 border-2 border-white shadow-lg animate-pulse font-bold">
                         NEW BEST!
+                    </div>
+                </div>
+
+                <!-- Leaderboard on Game Over -->
+                <div class="bg-white/90 border-4 border-black p-3 rounded-lg w-full shadow-lg mb-4">
+                    <h3 class="text-black text-xs mb-2 border-b-2 border-black pb-1">GLOBAL TOP 5</h3>
+                    <div id="leaderboard-list-gameover" class="text-xs text-left h-24 overflow-y-auto space-y-1 text-gray-800">
+                        <div class="text-center py-2 text-gray-500">Loading scores...</div>
                     </div>
                 </div>
 
@@ -126,7 +134,6 @@
         import { getFirestore, collection, doc, setDoc, onSnapshot, serverTimestamp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
 
         // --- 1. CONFIGURATION & SETUP ---
-        // TODO: REPLACE THIS SECTION WITH YOUR OWN FIREBASE CONFIG
         const firebaseConfig = {
             apiKey: "AIzaSyDogId4jJfiHEwvn5AJ-ECcxqyTcxvOk5c",
             authDomain: "tappy-bird-e2ab9.firebaseapp.com",
@@ -135,8 +142,7 @@
             messagingSenderId: "987751513752",
             appId: "1:987751513752:web:73ce0709c8698a62745aed",
             measurementId: "G-0MHXSEJ3QS"
-            }; 
-        // ---------------------------------------------------------
+        };
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
@@ -146,7 +152,12 @@
         // Game State
         let currentUser = null;
         let gameActive = false;
-        let frames = 0;
+        
+        // Physics & Timing
+        let lastTime = 0;
+        let framesAccumulator = 0; // Use for discrete events
+        let backgroundOffset = 0; // Separate from frame count
+        
         let score = 0;
         let highScore = 0; // Global High Score from DB
         let dailyScore = 0;
@@ -175,7 +186,10 @@
         const bestScoreEl = document.getElementById('best-score');
         const dailyScoreEl = document.getElementById('daily-score');
         const hud = document.getElementById('hud');
+        
         const leaderboardList = document.getElementById('leaderboard-list');
+        const leaderboardListGameOver = document.getElementById('leaderboard-list-gameover');
+        
         const newHighScoreBadge = document.getElementById('new-highscore-badge');
         const installBtn = document.getElementById('install-btn');
 
@@ -268,34 +282,41 @@
                 }
             }, (error) => {
                 console.error("Leaderboard error:", error);
-                leaderboardList.innerHTML = '<div class="text-center py-2 text-red-500">Offline</div>';
+                const errorMsg = '<div class="text-center py-2 text-red-500">Offline</div>';
+                leaderboardList.innerHTML = errorMsg;
+                leaderboardListGameOver.innerHTML = errorMsg;
             });
         }
 
         function renderLeaderboard(topScores) {
-            leaderboardList.innerHTML = '';
+            // Generate HTML once
+            let htmlContent = '';
+            
             if (topScores.length === 0) {
-                leaderboardList.innerHTML = '<div class="text-center py-2 text-gray-500">No scores yet.</div>';
-                return;
+                htmlContent = '<div class="text-center py-2 text-gray-500">No scores yet.</div>';
+            } else {
+                topScores.forEach((s, index) => {
+                    const isMe = currentUser && s.uid === currentUser.uid;
+                    let rank = `#${index + 1}`;
+                    if (index === 0) rank = '🥇';
+                    if (index === 1) rank = '🥈';
+                    if (index === 2) rank = '🥉';
+
+                    const rowClass = `flex justify-between items-center p-2 rounded ${isMe ? 'bg-yellow-200 font-bold border border-yellow-400' : 'bg-gray-100'} mb-1`;
+                    
+                    htmlContent += `
+                        <div class="${rowClass}">
+                            <span class="w-8 text-center">${rank}</span>
+                            <span class="flex-1 truncate px-2 font-sans text-[10px] md:text-xs">${s.name}</span>
+                            <span class="text-green-700 font-bold">${s.score}</span>
+                        </div>
+                    `;
+                });
             }
 
-            topScores.forEach((s, index) => {
-                const isMe = currentUser && s.uid === currentUser.uid;
-                const row = document.createElement('div');
-                row.className = `flex justify-between items-center p-2 rounded ${isMe ? 'bg-yellow-200 font-bold border border-yellow-400' : 'bg-gray-100'}`;
-                
-                let rank = `#${index + 1}`;
-                if (index === 0) rank = '🥇';
-                if (index === 1) rank = '🥈';
-                if (index === 2) rank = '🥉';
-
-                row.innerHTML = `
-                    <span class="w-8 text-center">${rank}</span>
-                    <span class="flex-1 truncate px-2 font-sans text-[10px] md:text-xs">${s.name}</span>
-                    <span class="text-green-700 font-bold">${s.score}</span>
-                `;
-                leaderboardList.appendChild(row);
-            });
+            // Update both lists
+            leaderboardList.innerHTML = htmlContent;
+            leaderboardListGameOver.innerHTML = htmlContent;
         }
 
         async function saveScore(newScore) {
@@ -441,7 +462,9 @@
                 // Cityscape silhouette
                 ctx.fillStyle = '#a5f3fc';
                 const citySpeed = 0.5;
-                const offset = (frames * citySpeed) % 100;
+                // Use backgroundOffset for smooth scrolling independent of framerate
+                const offset = (backgroundOffset * citySpeed) % 100;
+                
                 for(let i=0; i<canvas.width + 100; i+= 50) {
                     const h = 50 + Math.abs(Math.sin(i)) * 100;
                     ctx.fillRect(i - offset, canvas.height - 112 - h, 50, h);
@@ -477,7 +500,8 @@
             bird.rotation = 0;
             pipes = [];
             score = 0;
-            frames = 0;
+            framesAccumulator = 0; // Reset time accumulator
+            backgroundOffset = 0;
             gameSpeed = initialSpeed;
             scoreDisplay.innerText = 0;
             newHighScoreBadge.classList.add('hidden');
@@ -491,39 +515,42 @@
             bird.velocity = -bird.jumpStrength;
         }
 
-        function update() {
-            frames++;
+        function update(adjustment) {
+            // Update accumulators for things that were previously "frame" based
+            framesAccumulator += adjustment;
+            backgroundOffset += adjustment;
 
             // Increase speed by 0.15 every point scored
             // Use target speed logic for smooth transitions
             const targetSpeed = initialSpeed + (score * 0.15);
             
             // Smoothly accelerate towards target speed
+            // Adjusted for delta time: 0.05 per standard frame (16ms)
             if (gameSpeed < targetSpeed && gameSpeed < 8.0) {
-                gameSpeed += 0.05; 
+                gameSpeed += 0.05 * adjustment; 
             }
 
             // Bird Physics
-            bird.velocity += bird.gravity;
-            bird.y += bird.velocity;
+            bird.velocity += bird.gravity * adjustment;
+            bird.y += bird.velocity * adjustment;
 
-            // Rotation logic
+            // Rotation logic (visual only, can approximate)
             if (bird.velocity < 0) {
                 bird.rotation = -25 * Math.PI / 180;
             } else {
-                bird.rotation += 2 * Math.PI / 180;
+                bird.rotation += (2 * Math.PI / 180) * adjustment;
                 if (bird.rotation > 90 * Math.PI / 180) bird.rotation = 90 * Math.PI / 180;
             }
 
             // Ground Movement
-            groundX = (groundX - gameSpeed) % (window.innerWidth);
+            groundX = (groundX - gameSpeed * adjustment) % (window.innerWidth);
 
             // Pipe Management
             let shouldSpawn = false;
 
             if (pipes.length === 0) {
-                // Initial spawn delay
-                if (frames > 100) shouldSpawn = true;
+                // Initial spawn delay - approx 100 frames worth of time
+                if (framesAccumulator > 100) shouldSpawn = true;
             } else {
                 // Spawn based on physical distance from the last pipe
                 // This ensures pipes are always equally spaced regardless of game speed
@@ -547,7 +574,7 @@
 
             for (let i = 0; i < pipes.length; i++) {
                 const p = pipes[i];
-                p.x -= gameSpeed;
+                p.x -= gameSpeed * adjustment;
 
                 // Collision Detection
                 
@@ -610,17 +637,36 @@
             assets.drawBird(ctx, bird.x, bird.y, bird.width, bird.height, bird.rotation);
         }
 
-        function loop() {
-            if (gameActive) {
-                update();
-                draw();
-                animationId = requestAnimationFrame(loop);
+        // New Browser-Agnostic Loop
+        function loop(timestamp) {
+            if (!gameActive) {
+                lastTime = 0; // Reset
+                return; 
             }
+            
+            // First frame initialization
+            if (!lastTime) lastTime = timestamp;
+            
+            const deltaTime = timestamp - lastTime;
+            lastTime = timestamp;
+            
+            // Normalize to 60 FPS (approx 16.67ms per frame)
+            // If screen is 60hz, adjustment is 1.
+            // If screen is 120hz, adjustment is 0.5.
+            let adjustment = deltaTime / 16.67; 
+            
+            // Cap at 4 frames to prevent huge jumps if tab is inactive
+            if (adjustment > 4) adjustment = 4;
+
+            update(adjustment);
+            draw();
+            animationId = requestAnimationFrame(loop);
         }
 
         function startGame() {
             initGame();
             gameActive = true;
+            lastTime = 0; // Reset timing
             startScreen.classList.add('hidden'); // Use class hidden logic
             startScreen.style.display = 'none'; // Force hide to be safe
             
@@ -628,7 +674,7 @@
             gameOverScreen.classList.remove('flex'); // Ensure flex is removed
             
             hud.style.display = 'block';
-            loop();
+            animationId = requestAnimationFrame(loop);
         }
 
         function gameOver() {
