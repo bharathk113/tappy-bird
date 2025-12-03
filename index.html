@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Tappy Bird - Global Scores</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <!-- PWA Manifest for "Install App" feature -->
+    <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIlRhcHB5IEJpcmQiLAogICJzaG9ydF9uYW1lIjogIlRhcHB5IiwKICAic3RhcnRfdXJsIjogIi4iLAogICJkaXNwbGF5IjogInN0YW5kYWxvbmUiLAogICJiYWNrZ3JvdW5kX2NvbG9yIjogIiM3MGM1Y2UiLAogICJ0aGVtZV9jb2xvciIjogIiM3MGM1Y2UiLAogICJpY29ucyI6IFt7CiAgICAic3JjIjogImh0dHBzOi8vdmlhLnBsYWNlaG9sZGVyLmNvbS8xOTIiLAogICAgInNpemVzIjogIjE5MngxOTIiLAogICAgInR5cGUiOiAiaW1hZ2UvcG5nIgogIH1dCn0=">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #70c5ce; /* Sky color */
+            font-family: 'Press Start 2P', cursive;
+            touch-action: none; /* Prevent zoom/scroll on mobile */
+            -webkit-user-select: none;
+            user-select: none;
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+        .pixel-text {
+            text-shadow: 2px 2px 0 #000;
+        }
+        /* Custom scrollbar for leaderboard */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.1); 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #eab308; 
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Game Container -->
+    <div id="game-container" class="relative w-full h-screen">
+        <canvas id="gameCanvas"></canvas>
+
+        <!-- UI Overlay: Start / Game Over -->
+        <div id="ui-layer" class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-10">
+            
+            <!-- Main Menu -->
+            <div id="start-screen" class="text-center pointer-events-auto transition-opacity duration-300 flex flex-col items-center w-full max-w-md px-4">
+                <h1 class="text-4xl md:text-6xl text-white pixel-text mb-4 text-yellow-400">TAPPY<br>BIRD</h1>
+                
+                <div id="auth-section" class="mb-6 w-full">
+                    <div id="user-info" class="hidden mb-4 text-white text-xs md:text-sm bg-black/30 p-2 rounded backdrop-blur-sm">
+                        Logged in as <span id="user-name" class="text-yellow-300">...</span>
+                        <div class="mt-1 text-[10px] text-gray-300">Global Rank: <span id="user-rank" class="text-white font-bold">-</span></div>
+                    </div>
+                    <button id="login-btn" class="hidden bg-white hover:bg-gray-100 text-gray-800 font-bold py-2 px-4 rounded shadow mb-2 text-xs flex items-center justify-center mx-auto gap-2">
+                        <svg class="w-4 h-4" viewBox="0 0 24 24"><path fill="currentColor" d="M12.545,10.239v3.821h5.445c-0.712,2.315-2.647,3.972-5.445,3.972c-3.332,0-6.033-2.701-6.033-6.032s2.701-6.032,6.033-6.032c1.498,0,2.866,0.549,3.921,1.453l2.814-2.814C17.503,2.988,15.139,2,12.545,2C7.021,2,2.543,6.477,2.543,12s4.478,10,10.002,10c8.396,0,10.249-7.85,9.426-11.748L12.545,10.239z"/></svg>
+                        Sign in to Save Scores
+                    </button>
+                    <p class="text-[10px] text-white/80 mt-1 max-w-xs mx-auto">Note: Google Sign-In requires this app to be hosted on an authorized domain (e.g., GitHub Pages).</p>
+                </div>
+
+                <button id="start-btn" class="bg-green-500 hover:bg-green-600 text-white border-b-4 border-green-700 font-bold py-3 px-6 rounded pixel-text text-sm md:text-base mb-6 transform active:scale-95 transition-transform shadow-lg w-full max-w-xs">
+                    START GAME
+                </button>
+
+                <!-- Leaderboard Mini View -->
+                <div class="bg-white/90 border-4 border-black p-4 rounded-lg w-full shadow-lg">
+                    <h3 class="text-black text-sm mb-3 border-b-2 border-black pb-2">GLOBAL TOP 5</h3>
+                    <div id="leaderboard-list" class="text-xs text-left h-32 overflow-y-auto space-y-2 text-gray-800">
+                        <div class="text-center py-4 text-gray-500">Loading scores...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Game Over Screen -->
+            <div id="game-over-screen" class="hidden text-center pointer-events-auto bg-black/60 p-6 rounded-xl backdrop-blur-md w-[90%] max-w-sm">
+                <h2 class="text-4xl text-red-500 pixel-text mb-4">GAME OVER</h2>
+                
+                <div class="bg-[#ded895] border-4 border-[#543847] p-4 rounded mb-6 w-full relative shadow-xl">
+                    <div class="flex justify-between mb-2">
+                        <span class="text-[#e86a17] text-xs">SCORE</span>
+                        <span id="final-score" class="text-white text-shadow-sm font-bold text-xl">0</span>
+                    </div>
+                    <div class="flex justify-between mb-2">
+                        <span class="text-[#e86a17] text-xs">DAILY BEST</span>
+                        <span id="daily-score" class="text-white text-shadow-sm font-bold text-xl">0</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-[#e86a17] text-xs">ALL TIME</span>
+                        <span id="best-score" class="text-white text-shadow-sm font-bold text-xl">0</span>
+                    </div>
+                    <div id="new-highscore-badge" class="hidden absolute -top-3 -right-3 bg-red-500 text-white text-[10px] px-3 py-1 transform rotate-12 border-2 border-white shadow-lg animate-pulse font-bold">
+                        NEW BEST!
+                    </div>
+                </div>
+
+                <div class="flex flex-col gap-3 justify-center w-full">
+                    <button id="restart-btn" class="bg-green-500 hover:bg-green-600 text-white border-b-4 border-green-700 font-bold py-3 px-4 rounded pixel-text text-xs transform active:scale-95 transition-transform w-full">
+                        PLAY AGAIN
+                    </button>
+                    
+                    <!-- Install App Button (Hidden by default) -->
+                    <button id="install-btn" class="hidden bg-blue-500 hover:bg-blue-600 text-white border-b-4 border-blue-700 font-bold py-2 px-4 rounded pixel-text text-[10px] transform active:scale-95 transition-transform w-full items-center justify-center gap-2">
+                        📲 INSTALL APP
+                    </button>
+                </div>
+            </div>
+
+            <!-- In-Game HUD -->
+            <div id="hud" class="absolute top-10 w-full text-center hidden">
+                <span id="score-display" class="text-5xl text-white pixel-text drop-shadow-[0_4px_4px_rgba(0,0,0,0.5)]">0</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase Scripts -->
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
+        import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
+        import { getFirestore, collection, doc, setDoc, onSnapshot, serverTimestamp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
+
+        // --- 1. CONFIGURATION & SETUP ---
+        // TODO: REPLACE THIS SECTION WITH YOUR OWN FIREBASE CONFIG
+        const firebaseConfig = {
+            apiKey: "AIzaSyDogId4jJfiHEwvn5AJ-ECcxqyTcxvOk5c",
+            authDomain: "tappy-bird-e2ab9.firebaseapp.com",
+            projectId: "tappy-bird-e2ab9",
+            storageBucket: "tappy-bird-e2ab9.firebasestorage.app",
+            messagingSenderId: "987751513752",
+            appId: "1:987751513752:web:73ce0709c8698a62745aed",
+            measurementId: "G-0MHXSEJ3QS"
+            }; 
+        // ---------------------------------------------------------
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'tappy-bird-game';
+
+        // Game State
+        let currentUser = null;
+        let gameActive = false;
+        let frames = 0;
+        let score = 0;
+        let highScore = 0; // Global High Score from DB
+        let dailyScore = 0;
+        let initialSpeed = 2.5;
+        let gameSpeed = initialSpeed;
+        let animationId;
+        
+        // PWA Install Prompt
+        let deferredPrompt;
+        
+        // Canvas Setup
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // UI Elements
+        const startScreen = document.getElementById('start-screen');
+        const gameOverScreen = document.getElementById('game-over-screen');
+        const startBtn = document.getElementById('start-btn');
+        const restartBtn = document.getElementById('restart-btn');
+        const loginBtn = document.getElementById('login-btn');
+        const userInfo = document.getElementById('user-info');
+        const userNameDisplay = document.getElementById('user-name');
+        const userRankDisplay = document.getElementById('user-rank');
+        const scoreDisplay = document.getElementById('score-display');
+        const finalScoreEl = document.getElementById('final-score');
+        const bestScoreEl = document.getElementById('best-score');
+        const dailyScoreEl = document.getElementById('daily-score');
+        const hud = document.getElementById('hud');
+        const leaderboardList = document.getElementById('leaderboard-list');
+        const newHighScoreBadge = document.getElementById('new-highscore-badge');
+        const installBtn = document.getElementById('install-btn');
+
+        // --- 2. AUTHENTICATION (Google) ---
+        
+        // Listen for Auth State
+        onAuthStateChanged(auth, (user) => {
+            currentUser = user;
+            if (user) {
+                userInfo.classList.remove('hidden');
+                userInfo.classList.add('block');
+                loginBtn.classList.add('hidden');
+                userNameDisplay.textContent = user.displayName || "Player";
+                // Load High Score for this user from cached leaderboard if possible
+                subscribeToLeaderboard();
+            } else {
+                userInfo.classList.add('hidden');
+                loginBtn.classList.remove('hidden');
+                loginBtn.classList.add('flex'); // Tailwind flex
+                subscribeToLeaderboard(); // View only mode
+            }
+        });
+
+        // Login Action
+        loginBtn.addEventListener('click', async () => {
+            const provider = new GoogleAuthProvider();
+            try {
+                await signInWithPopup(auth, provider);
+            } catch (error) {
+                console.error("Login failed:", error);
+                alert("Login failed. If running locally or in a preview, Google Sign-In requires the domain to be authorized in Firebase Console.");
+            }
+        });
+
+        // --- 3. FIRESTORE: LEADERBOARD & LOCAL STORAGE ---
+
+        // Local Storage for Daily Score
+        function updateDailyScore(currentScore) {
+            const today = new Date().toDateString();
+            const stored = JSON.parse(localStorage.getItem('tappy_daily_best'));
+            
+            let currentDaily = 0;
+            
+            // Check if stored date matches today
+            if (stored && stored.date === today) {
+                currentDaily = stored.score;
+            }
+
+            if (currentScore > currentDaily) {
+                localStorage.setItem('tappy_daily_best', JSON.stringify({
+                    date: today,
+                    score: currentScore
+                }));
+                return currentScore;
+            }
+            return currentDaily;
+        }
+        
+        function subscribeToLeaderboard() {
+            // RULE 1: Correct Path - Using new collection name 'tappy_scores'
+            const scoresRef = collection(db, 'artifacts', appId, 'public', 'data', 'tappy_scores');
+            
+            // RULE 2: No complex queries. Fetch all, sort in client.
+            onSnapshot(scoresRef, (snapshot) => {
+                const scores = [];
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    if (data.score !== undefined && data.name) {
+                        scores.push({ ...data, uid: doc.id }); // Use doc ID (which is UID) or internal UID field
+                    }
+                });
+
+                // Sort descending
+                scores.sort((a, b) => b.score - a.score);
+
+                // Update Leaderboard UI
+                renderLeaderboard(scores.slice(0, 5)); // Top 5
+
+                // Update Personal Best & Rank Logic
+                if (currentUser) {
+                    const myEntryIndex = scores.findIndex(s => s.uid === currentUser.uid);
+                    
+                    if (myEntryIndex !== -1) {
+                        highScore = scores[myEntryIndex].score;
+                        userRankDisplay.innerText = `#${myEntryIndex + 1}`;
+                    } else {
+                        userRankDisplay.innerText = '-';
+                        // Keep current highScore if set locally, otherwise 0
+                    }
+                }
+            }, (error) => {
+                console.error("Leaderboard error:", error);
+                leaderboardList.innerHTML = '<div class="text-center py-2 text-red-500">Offline</div>';
+            });
+        }
+
+        function renderLeaderboard(topScores) {
+            leaderboardList.innerHTML = '';
+            if (topScores.length === 0) {
+                leaderboardList.innerHTML = '<div class="text-center py-2 text-gray-500">No scores yet.</div>';
+                return;
+            }
+
+            topScores.forEach((s, index) => {
+                const isMe = currentUser && s.uid === currentUser.uid;
+                const row = document.createElement('div');
+                row.className = `flex justify-between items-center p-2 rounded ${isMe ? 'bg-yellow-200 font-bold border border-yellow-400' : 'bg-gray-100'}`;
+                
+                let rank = `#${index + 1}`;
+                if (index === 0) rank = '🥇';
+                if (index === 1) rank = '🥈';
+                if (index === 2) rank = '🥉';
+
+                row.innerHTML = `
+                    <span class="w-8 text-center">${rank}</span>
+                    <span class="flex-1 truncate px-2 font-sans text-[10px] md:text-xs">${s.name}</span>
+                    <span class="text-green-700 font-bold">${s.score}</span>
+                `;
+                leaderboardList.appendChild(row);
+            });
+        }
+
+        async function saveScore(newScore) {
+            // Update Local Daily Score
+            dailyScore = updateDailyScore(newScore);
+
+            if (!currentUser) return;
+            
+            // Only write to Firebase if we beat the global All-Time high score stored in DB
+            if (newScore > highScore) {
+                 highScore = newScore;
+                 newHighScoreBadge.classList.remove('hidden');
+                 
+                 try {
+                    // Use setDoc with the user's UID as the document ID
+                    // This ensures 1 record per user
+                    const userScoreRef = doc(db, 'artifacts', appId, 'public', 'data', 'tappy_scores', currentUser.uid);
+                    
+                    await setDoc(userScoreRef, {
+                        uid: currentUser.uid,
+                        name: currentUser.displayName || "Anonymous Bird",
+                        score: newScore,
+                        timestamp: serverTimestamp()
+                    }, { merge: true });
+                    
+                 } catch (e) {
+                    console.error("Error saving score", e);
+                 }
+            }
+        }
+
+        // --- 4. GAME ENGINE & ASSETS ---
+
+        // Resize Canvas
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        // Assets
+        const assets = {
+            drawBird: (ctx, x, y, width, height, rotation) => {
+                ctx.save();
+                // Translate to center of bird for rotation
+                ctx.translate(x + width / 2, y + height / 2);
+                ctx.rotate(rotation);
+                
+                // Draw relative to center (-width/2, -height/2)
+                
+                // Body
+                ctx.fillStyle = '#facc15'; // Yellow
+                ctx.fillRect(-width/2, -height/2, width, height);
+                // Border
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = '#000';
+                ctx.strokeRect(-width/2, -height/2, width, height);
+                
+                // Eye
+                ctx.fillStyle = '#fff';
+                ctx.fillRect(width/4, -height/2 + 2, 10, 10);
+                ctx.strokeRect(width/4, -height/2 + 2, 10, 10);
+                ctx.fillStyle = '#000'; // Pupil
+                ctx.fillRect(width/4 + 6, -height/2 + 4, 2, 2);
+                
+                // Beak
+                ctx.fillStyle = '#f97316'; // Orange
+                ctx.fillRect(width/4, 2, 12, 8);
+                ctx.strokeRect(width/4, 2, 12, 8);
+                
+                // Wing
+                ctx.fillStyle = '#eab308'; // Darker yellow
+                ctx.fillRect(-width/4, 0, 14, 8);
+                ctx.strokeRect(-width/4, 0, 14, 8);
+
+                ctx.restore();
+            },
+            drawPipe: (ctx, x, y, width, height, isTop) => {
+                ctx.fillStyle = '#22c55e'; // Green
+                ctx.fillRect(x, y, width, height);
+                
+                // Border
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = '#000';
+                ctx.strokeRect(x, y, width, height);
+                
+                // Cap
+                const capHeight = 24;
+                const capY = isTop ? y + height - capHeight : y;
+                // Ensure cap doesn't draw outside pipe area if pipe is too short
+                if (height > capHeight) {
+                    ctx.fillStyle = '#22c55e';
+                    ctx.fillRect(x - 2, capY, width + 4, capHeight);
+                    ctx.strokeRect(x - 2, capY, width + 4, capHeight);
+                    
+                     // Highlight
+                    ctx.fillStyle = '#86efac'; // Light green
+                    ctx.fillRect(x + 4, y + (isTop ? 0 : capHeight), 4, height - capHeight);
+                    ctx.fillRect(x + 2, capY + 2, 4, capHeight - 4);
+                }
+            },
+            drawGround: (ctx, x, width, height) => {
+                const yPos = canvas.height - height;
+                ctx.fillStyle = '#ded895'; // Light brown
+                ctx.fillRect(x, yPos, width, height);
+                
+                // Grass top
+                ctx.fillStyle = '#4ade80';
+                ctx.fillRect(x, yPos, width, 15);
+                
+                // Top Border
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = '#000';
+                ctx.beginPath();
+                ctx.moveTo(x, yPos);
+                ctx.lineTo(x+width, yPos);
+                ctx.stroke();
+                
+                // Diagonal Pattern
+                ctx.strokeStyle = '#d2b48c';
+                ctx.beginPath();
+                for(let i=0; i<width; i+=20) {
+                    ctx.moveTo(x + i, yPos + 15);
+                    ctx.lineTo(x + i - 10, yPos + 35); // Draw a bit down
+                }
+                ctx.stroke();
+            },
+            drawBackground: (ctx) => {
+                // Clouds
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+                const t = Date.now() / 10000;
+                for(let i=0; i<5; i++) {
+                    const x = ((i * 200) + (t * 50)) % (canvas.width + 200) - 100;
+                    const y = canvas.height - 150 - (i * 30);
+                    ctx.beginPath();
+                    ctx.arc(x, y, 30, 0, Math.PI * 2);
+                    ctx.arc(x + 25, y - 10, 40, 0, Math.PI * 2);
+                    ctx.arc(x + 50, y, 30, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                
+                // Cityscape silhouette
+                ctx.fillStyle = '#a5f3fc';
+                const citySpeed = 0.5;
+                const offset = (frames * citySpeed) % 100;
+                for(let i=0; i<canvas.width + 100; i+= 50) {
+                    const h = 50 + Math.abs(Math.sin(i)) * 100;
+                    ctx.fillRect(i - offset, canvas.height - 112 - h, 50, h);
+                }
+            }
+        };
+
+        // Game Objects
+        const bird = {
+            x: 50,
+            y: 150,
+            width: 34,
+            height: 24,
+            velocity: 0,
+            gravity: 0.25,
+            jumpStrength: 4.6,
+            radius: 12,
+            rotation: 0
+        };
+
+        let pipes = [];
+        const pipeWidth = 52;
+        const pipeGap = 150; 
+        const pipeSpacing = 320; // Fixed pixel distance between pipes
+        const groundHeight = 112;
+        let groundX = 0;
+
+        // --- 5. LOGIC ---
+
+        function initGame() {
+            bird.y = canvas.height / 2;
+            bird.velocity = 0;
+            bird.rotation = 0;
+            pipes = [];
+            score = 0;
+            frames = 0;
+            gameSpeed = initialSpeed;
+            scoreDisplay.innerText = 0;
+            newHighScoreBadge.classList.add('hidden');
+            
+            // Sync Daily on Start
+            dailyScore = updateDailyScore(0);
+        }
+
+        function jump() {
+            if (!gameActive) return;
+            bird.velocity = -bird.jumpStrength;
+        }
+
+        function update() {
+            frames++;
+
+            // Increase speed by 0.15 every point scored
+            // Use target speed logic for smooth transitions
+            const targetSpeed = initialSpeed + (score * 0.15);
+            
+            // Smoothly accelerate towards target speed
+            if (gameSpeed < targetSpeed && gameSpeed < 8.0) {
+                gameSpeed += 0.05; 
+            }
+
+            // Bird Physics
+            bird.velocity += bird.gravity;
+            bird.y += bird.velocity;
+
+            // Rotation logic
+            if (bird.velocity < 0) {
+                bird.rotation = -25 * Math.PI / 180;
+            } else {
+                bird.rotation += 2 * Math.PI / 180;
+                if (bird.rotation > 90 * Math.PI / 180) bird.rotation = 90 * Math.PI / 180;
+            }
+
+            // Ground Movement
+            groundX = (groundX - gameSpeed) % (window.innerWidth);
+
+            // Pipe Management
+            let shouldSpawn = false;
+
+            if (pipes.length === 0) {
+                // Initial spawn delay
+                if (frames > 100) shouldSpawn = true;
+            } else {
+                // Spawn based on physical distance from the last pipe
+                // This ensures pipes are always equally spaced regardless of game speed
+                const lastPipe = pipes[pipes.length - 1];
+                if (canvas.width - lastPipe.x >= pipeSpacing) {
+                    shouldSpawn = true;
+                }
+            }
+            
+            if (shouldSpawn) {
+                const minPipeHeight = 50;
+                const maxPipeHeight = canvas.height - groundHeight - pipeGap - minPipeHeight;
+                const randomHeight = Math.floor(Math.random() * (maxPipeHeight - minPipeHeight + 1) + minPipeHeight);
+
+                pipes.push({
+                    x: canvas.width,
+                    y: randomHeight,
+                    passed: false
+                });
+            }
+
+            for (let i = 0; i < pipes.length; i++) {
+                const p = pipes[i];
+                p.x -= gameSpeed;
+
+                // Collision Detection
+                
+                // 1. Ground Collision (Fixed: Check bottom of bird against ground top)
+                // canvas.height - groundHeight is the Y coordinate of the ground surface
+                if (bird.y + bird.height >= canvas.height - groundHeight) {
+                    bird.y = canvas.height - groundHeight - bird.height; // Clamp to ground
+                    gameOver();
+                }
+
+                // 2. Pipes
+                const bx = bird.x + 4; // Hitbox tuning
+                const by = bird.y + 4;
+                const bw = bird.width - 8;
+                const bh = bird.height - 8;
+
+                // Top Pipe
+                if (bx < p.x + pipeWidth && bx + bw > p.x && by < p.y) {
+                    gameOver();
+                }
+
+                // Bottom Pipe
+                if (bx < p.x + pipeWidth && bx + bw > p.x && by + bh > p.y + pipeGap) {
+                    gameOver();
+                }
+
+                // Scoring
+                if (p.x + pipeWidth < bird.x && !p.passed) {
+                    score++;
+                    scoreDisplay.innerText = score;
+                    p.passed = true;
+                }
+
+                // Remove off-screen pipes
+                if (p.x + pipeWidth < 0) {
+                    pipes.shift();
+                    i--;
+                }
+            }
+
+            // Ceiling Cap
+            if (bird.y < 0) bird.y = 0;
+        }
+
+        function draw() {
+            // Clear
+            ctx.fillStyle = '#70c5ce';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            assets.drawBackground(ctx);
+
+            pipes.forEach(p => {
+                assets.drawPipe(ctx, p.x, 0, pipeWidth, p.y, true);
+                assets.drawPipe(ctx, p.x, p.y + pipeGap, pipeWidth, canvas.height - groundHeight - (p.y + pipeGap), false);
+            });
+
+            assets.drawGround(ctx, groundX, canvas.width + 20, groundHeight);
+            assets.drawGround(ctx, groundX + canvas.width, canvas.width + 20, groundHeight);
+
+            assets.drawBird(ctx, bird.x, bird.y, bird.width, bird.height, bird.rotation);
+        }
+
+        function loop() {
+            if (gameActive) {
+                update();
+                draw();
+                animationId = requestAnimationFrame(loop);
+            }
+        }
+
+        function startGame() {
+            initGame();
+            gameActive = true;
+            startScreen.classList.add('hidden'); // Use class hidden logic
+            startScreen.style.display = 'none'; // Force hide to be safe
+            
+            gameOverScreen.classList.add('hidden');
+            gameOverScreen.classList.remove('flex'); // Ensure flex is removed
+            
+            hud.style.display = 'block';
+            loop();
+        }
+
+        function gameOver() {
+            if (!gameActive) return; // Prevent multiple triggers
+            gameActive = false;
+            cancelAnimationFrame(animationId);
+            
+            // UI Updates
+            hud.style.display = 'none';
+            
+            // Calculate scores before display
+            saveScore(score).then(() => {
+                // Show Game Over (using flex for centering)
+                gameOverScreen.classList.remove('hidden');
+                gameOverScreen.classList.add('flex', 'flex-col', 'items-center');
+                
+                finalScoreEl.innerText = score;
+                bestScoreEl.innerText = Math.max(score, highScore);
+                dailyScoreEl.innerText = dailyScore;
+
+                // Nudge Install if available
+                if (deferredPrompt) {
+                    installBtn.classList.remove('hidden');
+                    installBtn.classList.add('flex');
+                }
+            });
+        }
+
+        // --- 6. CONTROLS ---
+
+        startBtn.addEventListener('click', startGame);
+        
+        restartBtn.addEventListener('click', () => {
+            gameOverScreen.classList.add('hidden');
+            gameOverScreen.classList.remove('flex');
+            startGame();
+        });
+
+        // Universal Input Handler
+        function handleInput(e) {
+            // Prevent default touch actions like zoom/scroll during game
+            if (e.type === 'touchstart' && gameActive) {
+                e.preventDefault(); 
+            }
+            
+            if (gameActive) {
+                jump();
+            }
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') {
+                if (gameActive) jump();
+                // If game over is visible (not hidden) and space pressed, restart
+                else if (!gameOverScreen.classList.contains('hidden')) {
+                    restartBtn.click();
+                }
+            }
+        });
+
+        canvas.addEventListener('mousedown', handleInput);
+        canvas.addEventListener('touchstart', handleInput, {passive: false});
+
+        // --- 7. PWA INSTALLATION ---
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            console.log("Install prompt captured");
+        });
+
+        installBtn.addEventListener('click', async () => {
+            if (!deferredPrompt) return;
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            console.log(`User response to install prompt: ${outcome}`);
+            deferredPrompt = null;
+            installBtn.classList.add('hidden');
+        });
+
+    </script>
+</body>
+</html>
