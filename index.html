@@ -194,9 +194,7 @@
         }
 
         window.addEventListener('beforeinstallprompt', (e) => {
-            // Prevent Chrome 67 and earlier from automatically showing the prompt
             e.preventDefault();
-            // Stash the event so it can be triggered later.
             deferredPrompt = e;
             console.log("Install prompt captured! Ready to nudge.");
         });
@@ -573,7 +571,7 @@
             
             // Smoothly accelerate towards target speed
             // Adjusted for delta time: 0.05 per standard frame (16ms)
-            if (gameSpeed < targetSpeed && gameSpeed < 8.0) {
+            if (gameSpeed < targetSpeed && gameSpeed < 12.0) { // Increased MAX Speed
                 gameSpeed += 0.05 * adjustment; 
             }
 
@@ -610,8 +608,28 @@
             if (shouldSpawn) {
                 const minPipeHeight = 50;
                 const maxPipeHeight = canvas.height - groundHeight - pipeGap - minPipeHeight;
-                const randomHeight = Math.floor(Math.random() * (maxPipeHeight - minPipeHeight + 1) + minPipeHeight);
-
+                
+                // --- NEW PORTRAIT MODE FIX ---
+                // Instead of purely random, we clamp the new height relative to the previous pipe
+                // This prevents "impossible jumps" where pipes span the entire screen height in one go.
+                
+                let randomHeight;
+                const maxPipeChange = 250; // Max pixels a pipe can move up/down from previous
+                
+                if (pipes.length > 0) {
+                    const lastY = pipes[pipes.length - 1].y;
+                    
+                    // Calculate bounds relative to last pipe
+                    const lowBound = Math.max(minPipeHeight, lastY - maxPipeChange);
+                    const highBound = Math.min(maxPipeHeight, lastY + maxPipeChange);
+                    
+                    // Generate within safe bounds
+                    randomHeight = Math.floor(Math.random() * (highBound - lowBound + 1) + lowBound);
+                } else {
+                    // First pipe can be anywhere
+                    randomHeight = Math.floor(Math.random() * (maxPipeHeight - minPipeHeight + 1) + minPipeHeight);
+                }
+                
                 pipes.push({
                     x: canvas.width,
                     y: randomHeight,
