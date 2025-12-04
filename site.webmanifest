@@ -1,0 +1,22 @@
+{
+    "name": "Tappy Bird",
+    "short_name": "Tappy",
+    "icons": [
+        {
+            "src": "/android-chrome-192x192.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "/android-chrome-512x512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ],
+    "theme_color": "#70c5ce",
+    "background_color": "#70c5ce",
+    "display": "standalone",
+    "orientation": "portrait",
+    "start_url": "./index.html",
+    "scope": "./"
+}
