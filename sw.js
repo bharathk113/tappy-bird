@@ -26,6 +26,13 @@ self.addEventListener('install', (event) => {
 
 // 2. Fetch Event - Serves from cache if available, otherwise network
 self.addEventListener('fetch', (event) => {
+  // CRITICAL FIX: Ignore Firestore/Google API requests
+  // Let the browser handle these directly without Service Worker interference
+  if (event.request.url.includes('firestore.googleapis.com') || 
+      event.request.url.includes('googleapis.com')) {
+    return;
+  }
+
   event.respondWith(
     caches.match(event.request)
       .then((response) => {
